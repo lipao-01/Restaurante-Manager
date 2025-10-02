@@ -7,4 +7,4 @@ r1 = Restaurante()
 i1 = Interface()
 
 b1.setup_inicial()
-i1.menu_pedidos()
+i1.sistema()

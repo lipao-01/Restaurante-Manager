@@ -2,6 +2,8 @@ import os
 from dotenv import load_dotenv
 import mysql.connector
 from mysql.connector import errorcode
+import hashlib
+from datetime import datetime
 
 load_dotenv()
 
@@ -68,6 +70,14 @@ class BancoDeDados():
                     FOREIGN KEY (id_mesa) REFERENCES mesas(id),
                     FOREIGN KEY (id_cardapio) REFERENCES cardapio(id)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+                """,
+
+                "usuarios": """
+                CREATE TABLE IF NOT EXISTS usuarios(
+                    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                    usuario VARCHAR(255) NOT NULL UNIQUE,
+                    senha_hash VARCHAR(64) NOT NULL
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
                 """
                 }
             
@@ -112,7 +122,58 @@ class BancoDeDados():
             return conn, cursor
         except mysql.connector.Error as err:
             return False, f'Erro de conexão com o banco de dados: {err}'
+
+    def hash_senha(self, senha):
+        return hashlib.sha256(senha.encode()).hexdigest()
+
+    def cadastrar_usuario(self, usuario, senha):
+        conn, cursor = self.conectar()
+
+        try:
+            senha_hash = self.hash_senha(senha)
+            print(f"Tentando cadastrar: {usuario}")
+            print(f"Tamanho do hash: {len(senha_hash)} caracteres")
+            print(f"Hash: {senha_hash}")
+            
+            sql = "INSERT INTO usuarios (usuario, senha_hash) VALUES (%s, %s)"
+            values = (usuario, senha_hash)
+
+            cursor.execute(sql, values)
+            conn.commit()
+            
+            id_usuario = cursor.lastrowid
+            return True, id_usuario
         
+        except mysql.connector.Error as err:
+            print(f"Erro no banco: {err}")
+            return False, f'Erro: {err}'
+
+        finally:
+            cursor.close()
+            conn.close()
+
+    def login(self, usuario, senha):
+        conn, cursor = self.conectar()
+
+        try:
+            senha_hash = self.hash_senha(senha)
+
+            cursor.execute("SELECT * FROM usuarios WHERE usuario = %s AND senha_hash = %s", (usuario, senha_hash))
+            resultado = cursor.fetchone()
+
+            if resultado:
+                return True, "Login realizado com sucesso!"
+            
+            else:
+                return False, "Usuário ou senha incorretos!"
+
+        except mysql.connector.Error as err:
+            return False, f'Erro: {err}'
+
+        finally:
+            cursor.close()
+            conn.close()
+           
     def adicionar_mesa(self, numero_mesa, status='livre'):
         conn, cursor = self.conectar()
         
@@ -356,14 +417,31 @@ class BancoDeDados():
             cursor.close()
             conn.close()
 
-    def buscar_status_mesa(self, numero_mesa):
+    def buscar_mesas_ocupadas(self):
         conn, cursor = self.conectar()
 
         try:
+            sql = "SELECT * FROM mesas WHERE status = 'ocupada' ORDER BY numero"
+            cursor.execute(sql)
+            resultados = cursor.fetchall()
+
+            return [row['numero'] for row in resultados] if resultados else []
+        
+        except mysql.connector.Error as err:
+            return False, f'Erro: {err}'
+
+        finally:
+            cursor.close()
+            conn.close()
+
+    def buscar_status_mesa(self, numero_mesa=None):
+        conn, cursor = self.conectar()
+
+        try:
+
             sql = "SELECT status FROM mesas WHERE numero = %s"
             cursor.execute(sql, (numero_mesa,))
             resultado = cursor.fetchone()
-
 
             status = resultado.get('status', None)
 
@@ -495,22 +573,32 @@ class BancoDeDados():
             cursor.close()
             conn.close()
 
-    def buscar_pedidos_n_pagos(self, numero_mesa):
+    def buscar_pedidos_n_pagos(self, numero_mesa=None):
         conn, cursor = self.conectar()
-        if not conn:
-            return None
+
+        data = datetime.now().strftime("%Y-%m-%d")
 
         try:
             sql = """SELECT p.id, c.item, p.quantidade,
-            p.preco_unitario, p.total_item, p.status
+            p.preco_unitario, p.total_item, p.status,
+            m.numero as numero_mesa
             FROM pedidos p
             JOIN mesas m ON p.id_mesa = m.id
             JOIN cardapio c ON p.id_cardapio = c.id
-            WHERE p.status = 'aberto' AND m.numero = %s
-            ORDER BY p.id
+            WHERE p.status = 'aberto'
+            AND DATE(p.data_hora) = %s
             """
 
-            cursor.execute(sql, (numero_mesa,))
+            value = [data]
+
+            if numero_mesa is not None:
+                sql += " AND m.numero = %s"
+                value.append(numero_mesa)
+
+
+            sql += " ORDER BY m.numero, p.id"
+
+            cursor.execute(sql, value)
             resultados = cursor.fetchall()
             return resultados if resultados else []
         
@@ -519,19 +607,48 @@ class BancoDeDados():
 
         finally:
             cursor.close()
-            conn.close()          
+            conn.close()   
 
-    def contar_pedidos_n_pagos(self, numero_mesa):
+    def calcular_faturamento(self):
         conn, cursor = self.conectar()
-        if not conn:
-            return None
+
+        data = datetime.now().strftime("%Y-%m-%d")
+
+        try:
+            sql = "SELECT SUM(p.total_item) AS faturamento_total FROM pedidos p WHERE p.status = 'pago' AND DATE(p.data_hora) = %s"
+
+            cursor.execute(sql, (data,))
+            resultado = cursor.fetchone()
+
+            faturamento = resultado['faturamento_total'] if resultado and resultado['faturamento_total'] else 0
+
+            return round(float(faturamento), 2) if faturamento else 0
+        
+        except mysql.connector.Error as err:
+            return False, f'Erro: {err}'
+
+        finally:
+            cursor.close()
+            conn.close()
+
+    def contar_pedidos_n_pagos(self, numero_mesa=None):
+        conn, cursor = self.conectar()
+        
+        data = datetime.now().strftime("%Y-%m-%d")
         
         try:
-            sql = """SELECT COUNT(*) AS total FROM pedidos p
-            JOIN mesas m on p.id_mesa = m.id 
-            WHERE p.status = 'aberto' AND m.numero = %s"""
+            if numero_mesa:
+                sql = """SELECT COUNT(*) AS total FROM pedidos p
+                JOIN mesas m on p.id_mesa = m.id 
+                WHERE p.status = 'aberto' AND m.numero = %s AND DATE(p.data_hora) = %s"""
 
-            cursor.execute(sql, (numero_mesa,))
+                cursor.execute(sql, (numero_mesa, data,))
+
+            else:
+                sql = "SELECT COUNT(*) AS total FROM pedidos p WHERE p.status = 'aberto' AND DATE(p.data_hora) = %s"
+
+                cursor.execute(sql, (data,))
+
             resultado = cursor.fetchone()
 
             if resultado:
@@ -547,6 +664,27 @@ class BancoDeDados():
             cursor.close()
             conn.close()
 
+    def contar_mesas_disponiveis(self):
+        conn, cursor = self.conectar()
+
+        try:
+            sql = "SELECT COUNT(*) AS total FROM mesas WHERE status = 'livre'"
+            cursor.execute(sql)
+
+            resultado = cursor.fetchone()
+
+            if resultado:
+                return resultado['total']
+            else:
+                return 0
+        
+        except mysql.connector.Error as err:
+            return False, f'Erro: {err}'
+
+        finally:
+            cursor.close()
+            conn.close()
+            
     @property
     def mesas(self):
         conn, cursor = self.conectar()
