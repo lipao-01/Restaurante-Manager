@@ -4,6 +4,7 @@ from datetime import datetime
 import os
 from dotenv import load_dotenv
 import time
+from pwinput import pwinput
 
 load_dotenv()
 
@@ -38,7 +39,7 @@ class Interface(Restaurante):
 
         if opc == 1:
             usuario = input('Insira o nome de usuário: ')
-            senha = input('Insira a sua senha: ')
+            senha = pwinput(prompt='Insira a sua senha: ', mask='*')
             print()
 
             sucesso, resultado = self.cadastrar_usuario(usuario=usuario, senha=senha)
@@ -55,7 +56,7 @@ class Interface(Restaurante):
         elif opc == 2:
             while True:
                 usuario = input('Usuário: ').lower().strip()
-                senha = input('Senha: ').strip()
+                senha = pwinput(prompt='Senha: ', mask='*').strip()
 
                 sucesso, mensagem = self.login(usuario, senha)
 
@@ -117,10 +118,10 @@ class Interface(Restaurante):
             print()
             print('-' * 70)
 
-            print('[1] Menu inicial')
-            print('[2] Ver mesas')
-            print('[3] Ver pedidos')
-            print('[0] Sair')
+            print(f'[{self.negrito}{self.ciano}1{self.reset}] Menu inicial')
+            print(f'[{self.negrito}{self.ciano}2{self.reset}] Ver mesas')
+            print(f'[{self.negrito}{self.ciano}3{self.reset}] Ver pedidos')
+            print(f'[{self.negrito}{self.ciano}0{self.reset}] Sair')
             print()
 
             print('=' * 70)
@@ -162,10 +163,10 @@ class Interface(Restaurante):
     def menu_principal(self):
         while True:
             self.print_titulo(f'SISTEMA DO RESTAURANTE')
-            print(f'[{self.ciano}1{self.reset}] {self.negrito}Cardápio')
-            print(f'[{self.ciano}2{self.reset}] {self.negrito}Mesas')
-            print(f'[{self.ciano}3{self.reset}] {self.negrito}Pedidos')
-            print(f'[{self.ciano}0{self.reset}] {self.negrito}Sair')
+            print(f'[{self.negrito}{self.ciano}1{self.reset}] Cardápio')
+            print(f'[{self.negrito}{self.ciano}2{self.reset}] Mesas')
+            print(f'[{self.negrito}{self.ciano}3{self.reset}] Pedidos')
+            print(f'[{self.negrito}{self.ciano}0{self.reset}] Voltar')
             print(f'=' * 70)
 
             opc = self.ler_num_inteiro(f'👉 Digite uma opção: ')
@@ -191,10 +192,10 @@ class Interface(Restaurante):
         while True:
             self.mostrar_cardapio()
             self.print_subtitulo('Menu Cardápio')
-            print(f'[{self.ciano}1{self.reset}] Adicionar item')
-            print(f'[{self.ciano}2{self.reset}] Atualizar preço')
-            print(f'[{self.ciano}3{self.reset}] Excluir item')
-            print(f'[{self.ciano}0{self.reset}] Voltar')
+            print(f'[{self.negrito}{self.ciano}1{self.reset}] Adicionar item')
+            print(f'[{self.negrito}{self.ciano}2{self.reset}] Atualizar preço')
+            print(f'[{self.negrito}{self.ciano}3{self.reset}] Excluir item')
+            print(f'[{self.negrito}{self.ciano}0{self.reset}] Voltar')
             print('=' * 70)
 
             opc = self.ler_num_inteiro('👉 Digite uma opção: ')
@@ -299,12 +300,12 @@ class Interface(Restaurante):
         while True:
             self.motrar_mesas()
             self.print_subtitulo('Menu Mesas')
-            print(f'[{self.ciano}1{self.reset}] Adicionar mesa')
-            print(f'[{self.ciano}2{self.reset}] Reservar mesa')
-            print(f'[{self.ciano}3{self.reset}] Excluir mesa')
-            print(f'[{self.ciano}4{self.reset}] Liberar mesa')
-            print(f'[{self.ciano}5{self.reset}] Ver pedidos')
-            print(f'[{self.ciano}0{self.reset}] Voltar')
+            print(f'[{self.negrito}{self.ciano}1{self.reset}] Adicionar mesa')
+            print(f'[{self.negrito}{self.ciano}2{self.reset}] Reservar mesa')
+            print(f'[{self.negrito}{self.ciano}3{self.reset}] Excluir mesa')
+            print(f'[{self.negrito}{self.ciano}4{self.reset}] Liberar mesa')
+            print(f'[{self.negrito}{self.ciano}5{self.reset}] Ver pedidos')
+            print(f'[{self.negrito}{self.ciano}0{self.reset}] Voltar')
             print('=' * 70)
 
             opc = self.ler_num_inteiro('👉 Digite uma opção: ')
@@ -365,11 +366,11 @@ class Interface(Restaurante):
         while True:
             self.mostrar_pedidos()
             self.print_subtitulo('Menu Pedidos')
-            print(f'[{self.ciano}1{self.reset}] Adicionar novo pedido')
-            print(f'[{self.ciano}2{self.reset}] Fechar conta')
-            print(f'[{self.ciano}3{self.reset}] Cancelar pedido')
-            print(f'[{self.ciano}4{self.reset}] Buscar pedidos detalhados da mesa')
-            print(f'[{self.ciano}0{self.reset}] Voltar')
+            print(f'[{self.negrito}{self.ciano}1{self.reset}] Adicionar novo pedido')
+            print(f'[{self.negrito}{self.ciano}2{self.reset}] Fechar conta')
+            print(f'[{self.negrito}{self.ciano}3{self.reset}] Cancelar pedido')
+            print(f'[{self.negrito}{self.ciano}4{self.reset}] Buscar pedidos detalhados da mesa')
+            print(f'[{self.negrito}{self.ciano}0{self.reset}] Voltar')
             print('=' * 70)
 
             opc = self.ler_num_inteiro('👉 Digite uma opção: ')

@@ -131,9 +131,6 @@ class BancoDeDados():
 
         try:
             senha_hash = self.hash_senha(senha)
-            print(f"Tentando cadastrar: {usuario}")
-            print(f"Tamanho do hash: {len(senha_hash)} caracteres")
-            print(f"Hash: {senha_hash}")
             
             sql = "INSERT INTO usuarios (usuario, senha_hash) VALUES (%s, %s)"
             values = (usuario, senha_hash)
