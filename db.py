@@ -508,6 +508,7 @@ class BancoDeDados():
             FROM pedidos p
             INNER JOIN mesas m ON p.id_mesa = m.id
             INNER JOIN cardapio c ON p.id_cardapio = c.id
+            WHERE DATE(p.data_hora) = CURDATE()
             ORDER BY m.numero ASC, p.data_hora  ASC
             """
             cursor.execute(sql)  # Sem parâmetros, pois é global (todas as mesas)
